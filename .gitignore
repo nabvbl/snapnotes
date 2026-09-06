@@ -1,0 +1,8 @@
+# publish artifacts
+publish/
+*.zip
+*.bak-*
+
+# OS
+.DS_Store
+Thumbs.db

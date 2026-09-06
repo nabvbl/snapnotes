@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SnapNotes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0B0B0C; color: #E8E8EA; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #101012; border-bottom: 1px solid #1F2024; }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand .mark { width: 26px; height: 26px; border-radius: 7px; background: #0B0B0C; border: 1px solid #2A2B2F; display: flex; align-items: center; justify-content: center; }
+  .brand .mark svg { width: 20px; height: 20px; }
+  h1 { font-size: .92rem; font-weight: 700; letter-spacing: .03em; color: #fff; }
+  .hint { color: #5C5E63; font-size: .76rem; font-family: 'Consolas', monospace; }
+  .stage { flex: 1; position: relative; overflow: auto; background: #050506; }
+  #shot { display: block; max-width: none; cursor: crosshair; margin: 0 auto; }
+  .sel { position: absolute; border: 1.5px solid #C6F04C; background: rgba(198,240,76,.08); pointer-events: none; display: none; z-index: 10; }
+  .actions { padding: 12px 16px; background: #101012; border-top: 1px solid #1F2024; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ocr-preview { flex-basis: 100%; max-height: 300px; overflow: auto; background: #141416; border: 1px solid #2A2B2F; border-radius: 8px; padding: 14px 16px; font-size: .95rem; line-height: 1.6; color: #C8C9CE; white-space: pre-wrap; }
+  .ocr-preview.err { color: #F04C4C; }
+  button { display: inline-flex; align-items: center; gap: 6px; background: #1A1B1F; color: #E8E8EA; border: 1px solid #2A2B2F; padding: 8px 14px; border-radius: 7px; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+  button:hover { border-color: #7E57C2; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button svg { width: 14px; height: 14px; }
+  button.primary { background: #C6F04C; color: #0B0B0C; border-color: #C6F04C; }
+  button.primary svg { stroke: #0B0B0C; }
+  button.primary:hover { filter: brightness(1.08); }
+  select, input[type="text"] { background: #141416; color: #E8E8EA; border: 1px solid #2A2B2F; border-radius: 7px; padding: 8px 10px; font-size: .8rem; outline: none; }
+  select:focus, input[type="text"]:focus { border-color: #7E57C2; }
+  .status { color: #87898F; font-size: .76rem; margin-left: auto; font-family: 'Consolas', monospace; }
+  .hidden { display: none !important; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { background: #2A2B2F; border-radius: 3px; }
+  /* rename / add-subject modal */
+  .modal-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: #141416; border: 1px solid #2A2B2F; border-radius: 12px; width: 440px; max-width: 92vw; padding: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+  .modal h3 { font-size: .9rem; color: #fff; margin-bottom: 6px; }
+  .modal .sub { color: #5C5E63; font-size: .74rem; margin-bottom: 12px; }
+  .modal .field { display: flex; gap: 8px; }
+  .modal .field input { flex: 1; background: #0B0B0C; border: 1px solid #2A2B2F; border-radius: 7px; padding: 9px 11px; color: #E8E8EA; font-size: .85rem; outline: none; font-family: 'Consolas', monospace; }
+  .modal .field input:focus { border-color: #C6F04C; }
+  .modal .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark" id="brandMark">
+      <svg viewBox="0 0 48 48" fill="none">
+        <rect x="1.5" y="1.5" width="45" height="45" rx="10" fill="#0B0B0C" stroke="#2A2B2F"/>
+        <g stroke="#C6F04C" stroke-width="3.4" stroke-linecap="round">
+          <path d="M16 7.5H10.5A3 3 0 0 0 7.5 10.5V16"/>
+          <path d="M32 7.5h5.5a3 3 0 0 1 3 3V16"/>
+          <path d="M16 40.5h-5.5a3 3 0 0 1-3-3V32"/>
+          <path d="M32 40.5h5.5a3 3 0 0 0 3-3V32"/>
+        </g>
+        <rect x="17.5" y="16" width="13" height="18" rx="2.5" fill="#C6F04C"/>
+        <path d="M21 24h6M21 28.5h6" stroke="#0B0B0C" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>SNAPNOTES</h1>
+  </div>
+  <span class="hint">drag to select area</span>
+</header>
+<div class="stage" id="stage">
+  <img id="shot" alt="">
+  <div class="sel" id="sel"></div>
+</div>
+<div class="actions" id="actionsBar">
+  <div class="ocr-preview hidden" id="ocrPreview"></div>
+  <button id="btnCopy" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copy
+  </button>
+  <button id="btnTranslate" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4-2 6-5 7"/><path d="M5 9c2 2 4 4 5 7"/><path d="M13 21l4-10 4 10"/><path d="M14.5 17h5"/></svg>
+    Translate
+  </button>
+  <button id="btnFormat" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+    Smart Format
+  </button>
+  <button id="btnSave" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Save Image
+  </button>
+  <button id="btnSaveNote" class="primary" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Save Note
+  </button>
+  <select id="subjectSel">
+    <option value="auto">Auto-tag subject</option>
+  </select>
+  <span class="status" id="status"></span>
+</div>
+
+<!-- rename / add-subject modal -->
+<div class="modal-wrap hidden" id="modalWrap">
+  <div class="modal">
+    <h3 id="modalTitle">Save note</h3>
+    <div class="sub" id="modalSub">Enter file name</div>
+    <div class="field">
+      <input type="text" id="modalInput" spellcheck="false">
+    </div>
+    <div class="btns">
+      <button id="modalCancel">Cancel</button>
+      <button class="primary" id="modalOk">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="lib/tesseract.min.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>
