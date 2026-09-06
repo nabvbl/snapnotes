@@ -10,7 +10,6 @@ extracted **on-device** (no cloud, no uploads), then copied, translated,
 or organized into a searchable, subject-tagged note library.
 
 ![demo](screenshots/screenshot-1.png)
-
 ## Features
 
 - **Drag-select OCR** — press `Alt+Shift+S`, drag over any area, text extracted instantly
